@@ -9,23 +9,19 @@ namespace WebApplication1.Services
 {
     public class MSGraphClient
     {
-        private readonly string _directoryId;
         private readonly string _groupPrefix;
         private readonly string _bearer;
 
         public MSGraphClient(MSGraphOptions options)
         {
-            _directoryId = options.DirectoryId;
-            _groupPrefix = options.RolePrefix;
-
             // prepare msgraph authentication request
             var client = new RestClient("https://login.microsoftonline.com");
-            var request = new RestRequest($"{_directoryId}/oauth2/v2.0/token")
+            var request = new RestRequest($"{options.DirectoryId}/oauth2/v2.0/token")
             {
                 AlwaysMultipartFormData = true
             };
 
-            request.AddHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+            request.AddHeader("Cache-Control", "no-cache");
             request.AddParameter("client_id", options.ClientId);
             request.AddParameter("client_secret", options.ClientSecret);
             request.AddParameter("scope", "https://graph.microsoft.com/.default");
@@ -35,15 +31,17 @@ namespace WebApplication1.Services
             var response = client.Post(request);
             var json = JObject.Parse(response.Content);
             _bearer = json.GetValue("access_token").Value<string>();
+
+            // save group prefix for role filtering
+            _groupPrefix = options.RolePrefix;
         }
 
         public async Task<IEnumerable<string>> GetUserRolesAsync(string userId)
         {
             // prepare msgraph memberOf request
-            var client = new RestClient("https://graph.windows.net");
-            var request = new RestRequest($"{_directoryId}/users/{userId}/memberOf");
+            var client = new RestClient("https://graph.microsoft.com/v1.0");
+            var request = new RestRequest($"users/{userId}/memberOf");
             request.AddHeader("Authorization", $"Bearer {_bearer}");
-            request.AddQueryParameter("api-version", "1.6");
 
             // send and extract roles
             var response = await client.ExecuteGetTaskAsync(request);
