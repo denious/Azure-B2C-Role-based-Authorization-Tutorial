@@ -18,8 +18,8 @@ namespace WebApplication1.Services
             _directoryId = options.DirectoryId;
             _groupPrefix = options.RolePrefix;
 
-            // prepare request
-            var client = new RestClient(options.LoginUrl);
+            // prepare msgraph authentication request
+            var client = new RestClient("https://login.microsoftonline.com");
             var request = new RestRequest($"{_directoryId}/oauth2/v2.0/token")
             {
                 AlwaysMultipartFormData = true
@@ -31,28 +31,29 @@ namespace WebApplication1.Services
             request.AddParameter("scope", "https://graph.microsoft.com/.default");
             request.AddParameter("grant_type", "client_credentials");
 
-            // send and parse
+            // send and extract token
             var response = client.Post(request);
             var json = JObject.Parse(response.Content);
             _bearer = json.GetValue("access_token").Value<string>();
         }
-        
+
         public async Task<IEnumerable<string>> GetUserRolesAsync(string userId)
         {
-            // prepare request
+            // prepare msgraph memberOf request
             var client = new RestClient("https://graph.windows.net");
             var request = new RestRequest($"{_directoryId}/users/{userId}/memberOf");
             request.AddHeader("Authorization", $"Bearer {_bearer}");
             request.AddQueryParameter("api-version", "1.6");
 
-            // send
+            // send and extract roles
             var response = await client.ExecuteGetTaskAsync(request);
-            
-            // parse roles
             var roles = JObject.Parse(response.Content)["value"]
-                .Select(o => o.Value<string>("displayName"))
-                .Where(o => o.StartsWith(_groupPrefix, StringComparison.OrdinalIgnoreCase))
-                .Select(o => o.Replace(_groupPrefix, string.Empty).Trim());
+                .Select(o => o.Value<string>("displayName"));
+
+            // use the role prefix to filter returned groups if supplied
+            if (!string.IsNullOrEmpty(_groupPrefix))
+                roles = roles.Where(o => o.StartsWith(_groupPrefix, StringComparison.OrdinalIgnoreCase))
+                    .Select(o => o.Replace(_groupPrefix, string.Empty).Trim());
 
             return roles;
         }

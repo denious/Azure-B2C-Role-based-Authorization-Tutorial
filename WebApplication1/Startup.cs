@@ -26,6 +26,7 @@ namespace WebApplication1
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            // inject msgraph client as transient to make sure bearer token is always renewed
             services.AddTransient(provider =>
             {
                 var options = new MSGraphOptions();
@@ -35,12 +36,14 @@ namespace WebApplication1
                 return client;
             });
 
+            // add AADB2C authentication
             services.AddAuthentication(AzureADB2CDefaults.BearerAuthenticationScheme)
                 .AddAzureADB2CBearer(
                     AzureADB2CDefaults.BearerAuthenticationScheme,
                     AzureADB2CDefaults.JwtBearerAuthenticationScheme,
                     options => { Configuration.Bind("AzureAdB2C", options); });
 
+            // configure identity post token validation to retrieve user roles and add them to identity claims
             services.PostConfigure<JwtBearerOptions>(AzureADB2CDefaults.JwtBearerAuthenticationScheme,
                 options =>
                 {
@@ -48,11 +51,11 @@ namespace WebApplication1
                     {
                         OnTokenValidated = async context =>
                         {
-                            // get AADB2C identity
+                            // get AADB2C identity by client ID
                             var applicationId = Configuration["AzureAdB2C:ClientId"];
                             var identity = context.Principal.Identities.First(o => o.HasClaim("aud", applicationId));
 
-                            // get authenticated user id
+                            // get authenticated user ID
                             var subjectId = identity.FindFirst(ClaimTypes.NameIdentifier).Value;
 
                             // query user roles
