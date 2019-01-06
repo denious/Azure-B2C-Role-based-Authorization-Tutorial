@@ -28,11 +28,10 @@ namespace WebApplication1
         {
             services.AddTransient(provider =>
             {
-                var options = new AzureB2CClientOptions();
-                Configuration.Bind("AzureAdB2CClient", options);
+                var options = new MSGraphOptions();
+                Configuration.Bind("MicrosoftGraph", options);
 
-                var client = new AzureB2CClient(options);
-
+                var client = new MSGraphClient(options);
                 return client;
             });
 
@@ -57,7 +56,7 @@ namespace WebApplication1
                             var subjectId = identity.FindFirst(ClaimTypes.NameIdentifier).Value;
 
                             // query user roles
-                            var client = _serviceProvider.GetRequiredService<AzureB2CClient>();
+                            var client = _serviceProvider.GetRequiredService<MSGraphClient>();
                             var roles = await client.GetUserRolesAsync(subjectId);
 
                             // add roles to identity's claims collection with the right type

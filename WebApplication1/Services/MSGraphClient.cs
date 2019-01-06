@@ -7,28 +7,28 @@ using RestSharp;
 
 namespace WebApplication1.Services
 {
-    public class AzureB2CClient
+    public class MSGraphClient
     {
         private readonly string _directoryId;
         private readonly string _groupPrefix;
         private readonly string _bearer;
 
-        public AzureB2CClient(AzureB2CClientOptions options)
+        public MSGraphClient(MSGraphOptions options)
         {
             _directoryId = options.DirectoryId;
             _groupPrefix = options.RolePrefix;
 
             // prepare request
             var client = new RestClient(options.LoginUrl);
-            var request = new RestRequest($"{_directoryId}/oauth2/token")
+            var request = new RestRequest($"{_directoryId}/oauth2/v2.0/token")
             {
                 AlwaysMultipartFormData = true
             };
 
-            request.AddHeader("Cache-Control", "no-cache");
-            request.AddParameter("resource", "https://graph.windows.net");
+            request.AddHeader("Cache-Control", "no-cache, no-store, must-revalidate");
             request.AddParameter("client_id", options.ClientId);
             request.AddParameter("client_secret", options.ClientSecret);
+            request.AddParameter("scope", "https://graph.microsoft.com/.default");
             request.AddParameter("grant_type", "client_credentials");
 
             // send and parse

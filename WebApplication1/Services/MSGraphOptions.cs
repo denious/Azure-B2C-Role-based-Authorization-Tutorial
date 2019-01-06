@@ -1,6 +1,6 @@
 ﻿namespace WebApplication1.Services
 {
-    public class AzureB2CClientOptions
+    public class MSGraphOptions
     {
         public string LoginUrl { get; set; }
         public string DirectoryId { get; set; }
