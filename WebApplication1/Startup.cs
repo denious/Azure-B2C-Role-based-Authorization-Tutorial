@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -51,9 +50,8 @@ namespace WebApplication1
                         OnTokenValidated = async context =>
                         {
                             // get AADB2C identity
-                            var tenantId = Configuration["AzureAdB2C:TenantId"];
-                            var identity = context.Principal.Identities.First(o => o.HasClaim(match =>
-                                match.Issuer.Equals(tenantId, StringComparison.CurrentCultureIgnoreCase)));
+                            var applicationId = Configuration["AzureAdB2C:ClientId"];
+                            var identity = context.Principal.Identities.First(o => o.HasClaim("aud", applicationId));
 
                             // get authenticated user id
                             var subjectId = identity.FindFirst(ClaimTypes.NameIdentifier).Value;

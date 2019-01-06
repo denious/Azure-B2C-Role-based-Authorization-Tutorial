@@ -9,18 +9,18 @@ namespace WebApplication1.Services
 {
     public class AzureB2CClient
     {
-        private readonly string _tenantId;
+        private readonly string _directoryId;
         private readonly string _groupPrefix;
         private readonly string _bearer;
 
         public AzureB2CClient(AzureB2CClientOptions options)
         {
-            _tenantId = options.TenantId;
+            _directoryId = options.DirectoryId;
             _groupPrefix = options.RolePrefix;
 
             // prepare request
             var client = new RestClient(options.LoginUrl);
-            var request = new RestRequest($"{_tenantId}/oauth2/token")
+            var request = new RestRequest($"{_directoryId}/oauth2/token")
             {
                 AlwaysMultipartFormData = true
             };
@@ -41,21 +41,20 @@ namespace WebApplication1.Services
         {
             // prepare request
             var client = new RestClient("https://graph.windows.net");
-            var request = new RestRequest($"{_tenantId}/users/{userId}/memberOf");
+            var request = new RestRequest($"{_directoryId}/users/{userId}/memberOf");
             request.AddHeader("Authorization", $"Bearer {_bearer}");
             request.AddQueryParameter("api-version", "1.6");
 
             // send
             var response = await client.ExecuteGetTaskAsync(request);
+            
+            // parse roles
+            var roles = JObject.Parse(response.Content)["value"]
+                .Select(o => o.Value<string>("displayName"))
+                .Where(o => o.StartsWith(_groupPrefix, StringComparison.OrdinalIgnoreCase))
+                .Select(o => o.Replace(_groupPrefix, string.Empty).Trim());
 
-            // parse groups
-            var applications = JObject.Parse(response.Content)["value"]
-                .Where(o => o.Value<string>("displayName")
-                    .StartsWith(_groupPrefix, StringComparison.OrdinalIgnoreCase))
-                .Select(o => o.ToString()
-                    .Replace(_groupPrefix, string.Empty));
-
-            return applications;
+            return roles;
         }
     }
 }
